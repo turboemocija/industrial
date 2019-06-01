@@ -1,0 +1,123 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.OleDb;
+
+namespace EIT_B33_Segota_Filip
+{
+    public partial class SpisakTerena : Form
+    {
+        OleDbConnection con;
+        DateTime date1, date2;
+        bool pom;
+        public SpisakTerena()
+        {
+            InitializeComponent();
+            string putanja = Environment.CurrentDirectory;
+            string[] putanjaBaze = putanja.Split(new string[] { "bin" }, StringSplitOptions.None);
+            AppDomain.CurrentDomain.SetData("DataDirectory", putanjaBaze[0]);
+
+            con = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.12.0; Data Source=|DataDirectory|\GolfKlub.accdb");
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void SpisakTerena_Load(object sender, EventArgs e)
+        {
+            comboBox1.SelectedIndex = 0;
+            comboBox2.SelectedIndex = 0;
+            comboBox3.SelectedIndex = 0;
+            comboBox4.SelectedIndex = 0;
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            string datum1 = comboBox3.Text + "/" + comboBox1.Text + "/" + maskedTextBox1.Text;
+            string datum2 = comboBox4.Text + "/" + comboBox2.Text + "/" + maskedTextBox2.Text;
+            if (!(DateTime.TryParse(datum1, out date1)) || !(DateTime.TryParse(datum2, out date2)))
+            {
+                MessageBox.Show("Nepravilno unet datum ili uneti datum ne postoji!", "Greska!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else
+            {
+                OleDbCommand cmd = new OleDbCommand("select distinct Teren.TerenID, Teren.Teren " +
+                                                    "from Teren inner join Partija on Teren.TerenID = Partija.TerenID " + 
+                                                    "where Partija.Datum between @dat1 and @dat2 " +
+                                                    "order by Teren.TerenID", con);
+                cmd.Parameters.AddWithValue("@dat1", date1);
+                cmd.Parameters.AddWithValue("@dat2", date2);
+
+                con.Open();
+                OleDbDataReader reader = cmd.ExecuteReader();
+                dataGridView1.Rows.Clear();
+                while (reader.Read())
+                {
+                    int br = new int();
+                    OleDbCommand cmd2 = new OleDbCommand("select Partija.PartijaID from Partija where Partija.TerenID = @id and Partija.Datum between @dat1 and @dat2", con);
+                    cmd2.Parameters.AddWithValue("@id", reader[0]);
+                    cmd2.Parameters.AddWithValue("@dat1", date1);
+                    cmd2.Parameters.AddWithValue("@dat2", date2);
+                    OleDbDataReader reader2 = cmd2.ExecuteReader();
+                    while (reader2.Read())
+                    {
+                        br++;
+                    }
+                    reader2.Close();
+                    cmd2.Dispose();
+                    pom = false;
+                    dataGridView1.Rows.Add(reader[0], reader[1], br);
+                }
+                reader.Close();
+                cmd.Dispose();
+                con.Close();
+                pom = true;
+            }
+        }
+
+        private void dataGridView1_SelectionChanged(object sender, EventArgs e)
+        {
+            if (dataGridView1.SelectedRows.Count > 0)
+            {
+                listView1.Items.Clear();
+                OleDbCommand cmd = new OleDbCommand("select Partija.PartijaID, Partija.Datum " +
+                                                    "from Partija inner join Teren on Partija.TerenID = Teren.TerenID " +
+                                                    "where Teren.TerenID = @id and Partija.Datum between @dat1 and @dat2 " +
+                                                    "order by Partija.Datum, Partija.PartijaID", con);
+
+                cmd.Parameters.AddWithValue("@id", dataGridView1.SelectedRows[0].Cells[0].Value);
+                cmd.Parameters.AddWithValue("@dat1", date1);
+                cmd.Parameters.AddWithValue("@dat2", date2);
+
+                if (con.State == ConnectionState.Closed)
+                {
+                    con.Open();
+                }
+
+                OleDbDataReader reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    DateTime d;
+                    DateTime.TryParse(reader[1].ToString(), out d);
+                    string[] str = new string[] { reader[0].ToString(), d.ToShortDateString()};
+                    ListViewItem item = new ListViewItem(str);
+                    listView1.Items.Add(item);
+                }
+                reader.Close();
+                cmd.Dispose();
+                if (pom)
+                {
+                    con.Close();
+                }
+            }
+        }
+    }
+}
