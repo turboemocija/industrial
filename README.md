@@ -1,2 +1,2 @@
 # industrial
-zdci prog
+zci prg
