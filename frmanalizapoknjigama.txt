@@ -1,0 +1,78 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.OleDb;
+using System.Windows.Forms.DataVisualization.Charting;
+
+namespace B15_Biblioteka
+{
+    using DsBiblioteka = SkolskaBibliotekaDataSet;
+
+    public partial class frmAnalizaPoKnjigama : Form
+    {
+        public frmAnalizaPoKnjigama()
+        {
+            InitializeComponent();
+        }
+
+        private void AnalizaPoKnjigama_Load(object sender, EventArgs e)
+        {
+            // TODO: This line of code loads data into the 'skolskaBibliotekaDataSet.Knjiga' table. You can move, or remove it, as needed.
+            this.knjigaTableAdapter.Fill(this.skolskaBibliotekaDataSet.Knjiga);
+            this.na_citanjuTableAdapter.Fill(this.skolskaBibliotekaDataSet.Na_citanju);
+        }
+
+        private void ComboBox1_Format(object sender, ListControlConvertEventArgs e)
+        {
+            DsBiblioteka.KnjigaRow knjiga = (DsBiblioteka.KnjigaRow) ((DataRowView)e.ListItem).Row;
+            e.Value = string.Format("{0} - {1}", knjiga.KnjigaID, knjiga.Naziv);
+        }
+
+        private void BtnPrikazi_Click(object sender, EventArgs e)
+        {
+            int godina;
+
+            if (!int.TryParse(txtGodina.Text, out godina) || godina <= 0)
+            {
+                Util.Error("Nepravilna godina.");
+                txtGodina.Focus();
+                txtGodina.SelectAll();
+                return;
+            }
+            short knjigaID = (short) comboKnjiga.SelectedValue;
+
+            int[] months =
+                (from knjiga in skolskaBibliotekaDataSet.Knjiga.AsEnumerable()
+                 join naCitanju in skolskaBibliotekaDataSet.Na_citanju.AsEnumerable()
+                 on knjiga.Field<short>("KnjigaID") equals naCitanju.Field<short>("KnjigaID")
+                 where knjiga.Field<short>("KnjigaID") == knjigaID
+                 && naCitanju.Field<DateTime>("DatUz").Year == (godina - 1)
+                 select naCitanju.Field<DateTime>("DatUz").Month - 1).ToArray();
+
+            int[] histogram = new int[12];
+            foreach (int month in months)
+            {
+                histogram[month]++;
+            }
+            string[] monthNames = new string[] { "Januar", "Februar", "Mart", "April", "Maj", "Jun", "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar" };
+
+            chart1.Series[0].Points.Clear();
+            for (int i = 0; i < histogram.Length; i++)
+            {
+                chart1.Series[0].Points.AddXY(monthNames[i], histogram[i]);
+            }
+            
+        }
+
+        private void BtnIzadji_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+    }
+}
