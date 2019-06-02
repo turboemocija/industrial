@@ -1,0 +1,91 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace B21
+{
+    public partial class frmNezavrseniProjekti : Form
+    {
+        public frmNezavrseniProjekti()
+        {
+            InitializeComponent();
+        }
+
+        private void FrmNezavrseniProjekti_Load(object sender, EventArgs e)
+        {
+            
+            // TODO: This line of code loads data into the 'dsEvidencija.Projekat' table. You can move, or remove it, as needed.
+            this.projekatTableAdapter.Fill(this.dsEvidencija.Projekat);
+            this.radnikTableAdapter.Fill(this.dsEvidencija.Radnik);
+
+            gridViewRadnici.Columns[1].HeaderText = "Ime i prezime";
+
+            var query =
+                from projekat in dsEvidencija.Projekat.AsEnumerable()
+                where projekat.Field<bool>("ProjekatZavrsen") == false
+                let difference = DateTime.Now - projekat.Field<DateTime>("DatumPocetka")
+                let godine = difference.Days / 365
+                let meseci = (difference.Days - (godine * 365)) / 30
+                let dani = difference.Days % 30
+                select new
+                {
+                    ID = projekat.Field<short>("ProjekatID"),
+                    Naziv = projekat.Field<string>("Naziv"),
+                    Godine = godine,
+                    Meseci = meseci,
+                    Dani = dani
+                };
+
+            foreach (var result in query)
+            {
+                DataRow row = dtNezavrseniProjekti.Rows.Add();
+                row.SetField("ID", result.ID);
+                row.SetField("Naziv", result.Naziv);
+                row.SetField("Godine", result.Godine);
+                row.SetField("Meseci", result.Meseci);
+                row.SetField("Dani", result.Dani);
+            }
+
+            if (gridViewProjekti.Rows.Count > 0)
+            {
+                gridViewProjekti.CurrentCell = gridViewProjekti.Rows[0].Cells[0];
+                GridViewProjekti_CellClick(null, null);
+            }
+        }
+
+        private void BtnIzadji_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void GridViewProjekti_CellClick(object sender, DataGridViewCellEventArgs e)
+        {   
+            int index = gridViewProjekti.CurrentCell.RowIndex;
+            short sifra = (short)dtNezavrseniProjekti.Rows[index]["ID"];
+
+            var query =
+                from radnik in dsEvidencija.Radnik.AsEnumerable()
+                let id = radnik.Field<short>("RadnikID")
+                where id == sifra
+                select new
+                {
+                    Sifra = id,
+                    ImePrezime = radnik.Field<string>("Ime") + " " + radnik.Field<string>("Prezime")
+                };
+
+            dtRadnici.Clear();
+            foreach (var result in query)
+            {
+                DataRow row = dtRadnici.Rows.Add();
+                row.SetField("ID", result.Sifra);
+                row.SetField("ImePrezime", result.ImePrezime);
+            }
+        }
+    }
+}
