@@ -1,0 +1,180 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Data.OleDb;
+
+namespace KecojevicB28
+{
+    public partial class Deca : Form
+    {
+        private OleDbConnection connection = new OleDbConnection();
+
+        public Deca()
+        {
+            InitializeComponent();
+            connection.ConnectionString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source=KecojevicB28Baza.accdb";
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void Deca_Load(object sender, EventArgs e)
+        {
+            try
+            {
+                connection.Open();
+                OleDbCommand command = new OleDbCommand();
+                command.Connection = connection;
+
+                string queryR = "SELECT * FROM Roditelji";
+
+                command.CommandText = queryR;
+                OleDbDataReader reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    String display = reader["Ime"].ToString() + " - " + reader["Prezime"].ToString();
+                    String hidden = reader["RoditeljiID"].ToString();
+                    comboBox1.Items.Add(new ComboBoxItem(display, hidden));
+                }
+                reader.Close();
+
+                connection.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error " + ex, "Greska");
+            }
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            Graphics g = pictureBox1.CreateGraphics();
+            int a = pictureBox1.Width;
+            Pen c = new Pen(Color.Red, 2);
+            Pen z = new Pen(Color.Green, 2);
+            Pen p = new Pen(Color.Blue, 2);
+
+            g.DrawRectangle(z, a / 3, a / 3, a / 3, a / 3);
+            g.DrawEllipse(p, a / 3, 0, a / 3, a / 3);
+            g.DrawLine(c, a / 3 + a / 12, 2 * a / 3, a / 3 + a / 12, a);
+            g.DrawLine(c, a / 3 + a / 4, 2 * a / 3, a / 3 + a / 4, a);
+            g.DrawLine(c, a / 3, a / 3, 0, a / 2);
+            g.DrawLine(c, 2 * a / 3, a / 3, a, 0);
+            g.Dispose();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            button2.Enabled = true;
+            connection.Open();
+            OleDbCommand command = new OleDbCommand();
+            command.CommandType = CommandType.Text;
+            command.Connection = connection;
+
+            string query = "SELECT MAX(DeteID) FROM Dete";                
+            command.CommandText = query;
+            int c = (int)command.ExecuteScalar();
+            textBox1.Text = (c+1).ToString();
+
+            textBox2.Text = "";
+            textBox3.Text = "";
+            dateTimePicker1.Value = DateTime.Now;
+            connection.Close();
+            comboBox1.SelectedIndex = -1;
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                int DeteID = Convert.ToInt32(textBox1.Text);
+                int PolID = 1;
+                if (radioButton1.Checked == true) { PolID = 1; } else { PolID = 2; }
+                String Ime = textBox2.Text;
+                String Prezime = textBox3.Text;
+                DateTime DatumRodjenja = dateTimePicker1.Value;
+                String RoditeljID = ((ComboBoxItem)comboBox1.SelectedItem).HiddenValue;
+
+                connection.Open();
+                OleDbCommand command = new OleDbCommand();
+                command.CommandType = CommandType.Text;
+                command.CommandText = "INSERT INTO Dete (DeteID,PolID,Ime,Prezime,DatumRodjenja,RoditeljID) values (?,?,?,?,?,?)";
+                command.Parameters.AddWithValue("@par1", DeteID);
+                command.Parameters.AddWithValue("@par2", PolID);
+                command.Parameters.AddWithValue("@par3", Ime);
+                command.Parameters.AddWithValue("@par4", Prezime);
+                command.Parameters.AddWithValue("@par5", DatumRodjenja);
+                command.Parameters.AddWithValue("@par6", RoditeljID);
+                command.Connection = connection;
+                int a = command.ExecuteNonQuery();
+                if (a > 0) { MessageBox.Show("Uspesno upisan", "Poruka"); }
+                else { MessageBox.Show("Greska!", "Poruka"); }
+                connection.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Greska: " + ex, "Test");
+                connection.Close();
+            }
+            this.Refresh();
+        }
+    }
+}
+
+
+
+
+////
+
+
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace KecojevicB28
+{
+    public class ComboBoxItem
+    {
+        String display;
+        String hidden;
+
+        public ComboBoxItem(string d, string h)
+        {
+            display = d;
+            hidden = h;
+        }
+
+        public string HiddenValue
+        {
+            get
+            {
+                return hidden;
+            }
+        }
+
+        public override string ToString()
+        {
+            return display;
+        }
+    }
+}
+
+
+//////
+
+
+
