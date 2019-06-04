@@ -1,0 +1,280 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.OleDb;
+
+namespace DnevniBoravak
+{
+    public partial class FDeca : Form
+    {
+
+        OleDbConnection konekcija;
+        OleDbCommand komanda;
+        int id = 0;
+        int prvitext;
+        DataTable tabela2 = new DataTable();
+        public FDeca()
+        {
+            InitializeComponent();
+            
+            string putanja = Environment.CurrentDirectory;
+            string[] putanjaBaze = putanja.Split(new string[] { "bin" }, StringSplitOptions.None);
+            AppDomain.CurrentDomain.SetData("DataDirectory", putanjaBaze[0]);
+
+            konekcija = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.12.0; Data Source=|DataDirectory|\boravak.accdb");
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            konekcija.Open();
+
+            string query = "SELECT MAX(DeteID) FROM Dete";
+
+            using (OleDbCommand cmd = new OleDbCommand(query, konekcija))
+            {
+
+                id = Convert.ToInt32(cmd.ExecuteScalar()) + 1;
+
+            }
+
+            textBox1.Text = id.ToString();
+
+            textBox2.Text = "";
+
+            textBox3.Text = "";
+
+            maskedTextBox1.Text = "";
+
+            
+
+            konekcija.Close();
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            Graphics g = pictureBox1.CreateGraphics();
+            int a = pictureBox1.Width;
+            Pen c = new Pen(Color.Red, 2);
+            Pen z = new Pen(Color.Green, 2);
+            Pen p = new Pen(Color.Blue, 2);
+
+            g.DrawRectangle(z, a / 3, a / 3, a / 3, a / 3);
+            g.DrawEllipse(p, a / 3, 0, a / 3, a / 3);
+            g.DrawLine(c, a / 3 + a / 12, 2 * a / 3, a / 3 + a / 12, a);
+            g.DrawLine(c, a / 3 + a / 4, 2 * a / 3, a / 3 + a / 4, a);
+            g.DrawLine(c, a / 3, a / 3, 0, a / 2);
+            g.DrawLine(c, 2 * a / 3, a / 3, a, 0);
+            g.Dispose();
+
+            //button5.Enabled = false;
+            //Graphics g = pictureBox1.CreateGraphics();
+            //Pen penblue = new Pen(Color.Blue);
+            //Pen penred = new Pen(Color.Red);
+            //Pen pengreen = new Pen(Color.Green);
+            //g.DrawEllipse(penblue, 20, 10, 50, 50);
+            //g.DrawRectangle(pengreen, 15, 60, 60, 60);
+            //g.DrawLine(penred, 15, 60, 0, 120);
+            //g.DrawLine(penred, 75, 60, 100, 15);
+            //g.DrawLine(penred, 30, 120, 30, 170);
+            //g.DrawLine(penred, 60, 120, 60, 170);
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+
+            if (textBox1.Text == "")
+            {
+                MessageBox.Show("Ne mozete uneti novog pre nego sto mu ne odredite sifru pritiskom na dugme 'Novi'");
+                return;
+            }
+
+            if (textBox2.Text == "" || textBox3.Text == "")
+            {
+                MessageBox.Show("Polja Ime i Prezime su obavezna, morate ih popuniti!");
+                return;
+            }
+            try
+            {
+                int DeteID = Convert.ToInt32(textBox1.Text);
+                int PolID = 1;
+                if (radioButton1.Checked == true) { PolID = 1; } else { PolID = 2; }
+                String Ime = textBox2.Text;
+                String Prezime = textBox3.Text;
+                DateTime DatumRodjenja = Convert.ToDateTime(maskedTextBox1.Text);
+                String RoditeljiID = ((ComboBoxItem)comboBox1.SelectedItem).HiddenValue;
+
+                konekcija.Open();
+                OleDbCommand command = new OleDbCommand();
+                command.CommandType = CommandType.Text;
+                command.CommandText = "INSERT INTO Dete (DeteID,PolID,Ime,Prezime,DatumRodjenja,RoditeljiID) values (?,?,?,?,?,?)";
+                command.Parameters.AddWithValue("@par1", DeteID);
+                command.Parameters.AddWithValue("@par2", PolID);
+                command.Parameters.AddWithValue("@par3", Ime);
+                command.Parameters.AddWithValue("@par4", Prezime);
+                command.Parameters.AddWithValue("@par5", DatumRodjenja);
+                command.Parameters.AddWithValue("@par6", RoditeljiID);
+                command.Connection = konekcija;
+                int a = command.ExecuteNonQuery();
+                if (a > 0) { MessageBox.Show("Uspesno upisan", "Poruka");
+
+                textBox1.Text = "";
+                textBox2.Text = "";
+                textBox3.Text = "";
+                maskedTextBox1.Text = "";
+                comboBox1.SelectedIndex = -1;
+                richTextBox1.Text = "";
+
+                }
+                else { MessageBox.Show("Greska!", "Poruka"); }
+                konekcija.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Greska: " + ex, "Test");
+                konekcija.Close();
+            }
+            this.Refresh();
+        }
+
+        private void FDeca_Load(object sender, EventArgs e)
+        {
+           
+            try
+            {
+                konekcija.Open();
+                OleDbCommand command = new OleDbCommand();
+                command.Connection = konekcija;
+
+                string queryR = "SELECT * FROM Roditelji";
+
+                command.CommandText = queryR;
+                OleDbDataReader reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    String display = reader["Ime"].ToString() + " - " + reader["Prezime"].ToString();
+                    String hidden = reader["RoditeljiID"].ToString();
+                    comboBox1.Items.Add(new ComboBoxItem(display, hidden));
+                }
+                reader.Close();
+
+                konekcija.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error " + ex, "Greska");
+            }
+        }
+
+        int j;
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+
+            if (textBox1.Text == "" || textBox2.Text == "") { 
+            konekcija.Open();
+
+            string query = "SELECT MAX(DeteID) FROM Dete";
+
+            using (OleDbCommand cmd = new OleDbCommand(query, konekcija))
+            {
+
+                id = Convert.ToInt32(cmd.ExecuteScalar()) + 1;
+
+            }
+
+            int i = id;
+            j = i - 2;
+
+            }
+
+
+            OleDbCommand komanda = new OleDbCommand("Select Count (*) From Dete", konekcija);
+            
+            OleDbDataAdapter ifaca = new OleDbDataAdapter();
+            OleDbCommand ifkom = new OleDbCommand("Select * From Dete", konekcija);
+            ifaca.SelectCommand = ifkom;
+            ifaca.Fill(tabela2);
+
+
+            if (j != -1) {  
+                textBox2.Text = tabela2.Rows[j]["Ime"].ToString();
+                textBox3.Text = tabela2.Rows[j]["Prezime"].ToString();
+
+                
+                maskedTextBox1.Text = tabela2.Rows[j]["DatumRodjenja"].ToString();
+                textBox1.Text = tabela2.Rows[j]["DeteID"].ToString();
+                prvitext = Convert.ToInt32(textBox1.Text);
+                
+            
+            j--;
+            }
+            else
+            {
+                MessageBox.Show("Stigli ste do kraja, nema prethodnog!");
+            }
+
+            konekcija.Close();
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+
+            j++;
+            if (textBox1.Text == "" || textBox2.Text == "")
+            {
+                konekcija.Open();
+
+                string query = "SELECT MAX(DeteID) FROM Dete";
+
+                using (OleDbCommand cmd = new OleDbCommand(query, konekcija))
+                {
+
+                    id = Convert.ToInt32(cmd.ExecuteScalar()) + 1;
+
+                }
+
+                
+                MessageBox.Show("Nema sledeceg od maksimalnog indeksa!");
+
+            }
+
+
+            OleDbCommand komanda = new OleDbCommand("Select Count (*) From Dete", konekcija);
+
+            OleDbDataAdapter ifaca = new OleDbDataAdapter();
+            OleDbCommand ifkom = new OleDbCommand("Select * From Dete", konekcija);
+            ifaca.SelectCommand = ifkom;
+            ifaca.Fill(tabela2);
+
+
+            
+            if (j != id-1)
+            {
+                textBox2.Text = tabela2.Rows[j]["Ime"].ToString();
+                textBox3.Text = tabela2.Rows[j]["Prezime"].ToString();
+
+
+                maskedTextBox1.Text = tabela2.Rows[j]["DatumRodjenja"].ToString();
+                textBox1.Text = tabela2.Rows[j]["DeteID"].ToString();
+                prvitext = Convert.ToInt32(textBox1.Text);
+            }
+            else
+            {
+                MessageBox.Show("Nema sledeceg od maksimalnog indeksa!");
+            }
+
+            konekcija.Close();
+        }
+    }
+}

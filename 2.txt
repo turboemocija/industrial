@@ -1,0 +1,100 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.OleDb;
+
+namespace DnevniBoravak
+{
+    public partial class FUzrast : Form
+    {
+
+        OleDbConnection konekcija;
+        OleDbCommand komanda;
+        public FUzrast()
+        {
+            InitializeComponent();
+            string putanja = Environment.CurrentDirectory;
+            string[] putanjaBaze = putanja.Split(new string[] { "bin" }, StringSplitOptions.None);
+            AppDomain.CurrentDomain.SetData("DataDirectory", putanjaBaze[0]);
+
+            konekcija = new OleDbConnection(@"Provider=Microsoft.ACE.OLEDB.12.0; Data Source=|DataDirectory|\boravak.accdb");
+
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void FUzrast_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            dataGridView1.Rows.Clear();
+            konekcija.Open();
+            OleDbCommand cmd = new OleDbCommand();
+
+
+            if (checkBox1.Checked == true && checkBox2.Checked == true)
+            {
+                MessageBox.Show("Ne mozete cekirati oba pola!");
+            }
+            
+            if (checkBox1.Checked == true && checkBox2.Checked == false)
+            {
+
+
+
+                cmd = new OleDbCommand("select Dete.Ime, Dete.Prezime, Dete.DatumRodjenja from Dete where Dete.PolID=@svojstvo", konekcija);
+
+
+
+                cmd.Parameters.AddWithValue("@svojstvo", 1);
+
+                OleDbDataReader reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    dataGridView1.Rows.Add(reader[0].ToString(), reader[1].ToString(), reader[2].ToString(), "Muski");
+                }
+                reader.Close();
+                reader.Dispose();
+            }
+
+
+            if (checkBox1.Checked == false && checkBox2.Checked == true)
+            {
+
+
+
+                cmd = new OleDbCommand("select Dete.Ime, Dete.Prezime, Dete.DatumRodjenja from Dete where Dete.PolID=@svojstvo", konekcija);
+
+
+
+                cmd.Parameters.AddWithValue("@svojstvo", 2);
+
+                OleDbDataReader reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    dataGridView1.Rows.Add(reader[0].ToString(), reader[1].ToString(), reader[2].ToString(), "Zenski");
+                }
+                reader.Close();
+                reader.Dispose();
+            }
+            konekcija.Close();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+    }
+}
